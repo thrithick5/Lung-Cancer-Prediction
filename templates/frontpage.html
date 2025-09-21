@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lung Cancer Prediction AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .menu-open {
+            transform: translateX(0);
+        }
+        
+        .menu-closed {
+            transform: translateX(-100%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold text-blue-600">
+                <i class="fas fa-lungs-virus mr-2"></i>Lung Cancer Prediction AI
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="/" class="text-blue-600 font-semibold border-b-2 border-blue-600">Home</a>
+                <a href="/detector" class="text-gray-600 hover:text-blue-600 transition-colors">Detector</a>
+            </div>
+            <button id="menu-toggle" class="md:hidden text-2xl text-gray-700">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Mobile Sidebar Menu -->
+    <div id="mobile-menu" class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 p-6 transition-transform duration-300 ease-in-out menu-closed md:hidden">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-xl font-bold text-blue-600"><i class="fas fa-lungs-virus mr-2"></i>Menu</h2>
+            <button id="close-menu" class="text-2xl text-gray-600">&times;</button>
+        </div>
+        <ul class="space-y-4">
+            <li><a href="#hero" class="menu-link block text-gray-700 hover:text-blue-600">Home</a></li>
+            <li><a href="#what-is-cancer" class="menu-link block text-gray-700 hover:text-blue-600">What is Lung Cancer?</a></li>
+            <li><a href="#risk-factors" class="menu-link block text-gray-700 hover:text-blue-600">Risk Factors</a></li>
+            <li><a href="#symptoms" class="menu-link block text-gray-700 hover:text-blue-600">Symptoms</a></li>
+            <li><a href="#screening" class="menu-link block text-gray-700 hover:text-blue-600">Screening Process</a></li>
+            <li><a href="#prevention" class="menu-link block text-gray-700 hover:text-blue-600">Prevention</a></li>
+            <li class="pt-4 border-t"><a href="/detector" class="font-semibold text-blue-600 hover:text-blue-800">Go to Detector <i class="fas fa-arrow-right ml-1"></i></a></li>
+        </ul>
+    </div>
+    <div id="menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"></div>
+
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+
+        <!-- Hero Section -->
+        <section id="hero" class="text-center py-16">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">Understanding Lung Cancer</h1>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">Empowering you with knowledge about risks, symptoms, and the importance of early detection in the fight against lung cancer.</p>
+            <a href="/detector" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-transform transform hover:scale-105">
+                Visit the AI Detector
+            </a>
+        </section>
+
+        <!-- What is Lung Cancer? Section -->
+        <section id="what-is-cancer" class="py-16 scroll-mt-20">
+            <div class="bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center"><i class="fas fa-info-circle mr-2 text-blue-500"></i>What is Lung Cancer?</h2>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <p class="text-gray-700 mb-4">Lung cancer is a type of cancer that begins in the lungs. Your lungs are two spongy organs in your chest that take in oxygen when you inhale and release carbon dioxide when you exhale.</p>
+                        <p class="text-gray-700 mb-4">It is the leading cause of cancer deaths worldwide. People who smoke have the greatest risk of lung cancer, though lung cancer can also occur in people who have never smoked. The risk of lung cancer increases with the length of
+                            time and number of cigarettes you've smoked.</p>
+                        <p class="text-gray-700 font-medium">There are two main types of lung cancer:</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-600 space-y-2">
+                            <li><strong>Small Cell Lung Cancer (SCLC):</strong> Occurs almost exclusively in heavy smokers and is less common.</li>
+                            <li><strong>Non-Small Cell Lung Cancer (NSCLC):</strong> An umbrella term for several types of lung cancers that behave in a similar way, such as squamous cell carcinoma, adenocarcinoma, and large cell carcinoma.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <img src="human-body-lungs.jpg" alt="Diagram of human lungs" class="rounded-lg shadow-md">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Risk Factors Section -->
+        <section id="risk-factors" class="py-16 scroll-mt-20">
+            <div class="bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center"><i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>Key Risk Factors</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Smoking -->
+                    <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                        <h3 class="text-xl font-semibold mb-2 text-red-800">Smoking</h3>
+                        <p class="text-gray-700">The number one risk factor. Includes cigarettes, cigars, and pipes. The earlier you quit, the better.</p>
+                    </div>
+                    <!-- Secondhand Smoke -->
+                    <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                        <h3 class="text-xl font-semibold mb-2 text-yellow-800">Secondhand Smoke</h3>
+                        <p class="text-gray-700">Inhaling smoke from others increases your risk, even if you don't smoke.</p>
+                    </div>
+                    <!-- Radon Gas -->
+                    <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+                        <h3 class="text-xl font-semibold mb-2 text-purple-800">Radon Gas</h3>
+                        <p class="text-gray-700">A natural radioactive gas that can build up in homes and is a leading cause for non-smokers.</p>
+                    </div>
+                    <!-- Asbestos -->
+                    <div class="bg-gray-100 p-6 rounded-lg border border-gray-200">
+                        <h3 class="text-xl font-semibold mb-2 text-gray-800">Asbestos</h3>
+                        <p class="text-gray-700">Workplace exposure to asbestos and other carcinogens can significantly increase risk.</p>
+                    </div>
+                    <!-- Family History -->
+                    <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                        <h3 class="text-xl font-semibold mb-2 text-green-800">Family History</h3>
+                        <p class="text-gray-700">Having a parent, sibling, or child with lung cancer can increase your risk.</p>
+                    </div>
+                    <!-- Air Pollution -->
+                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                        <h3 class="text-xl font-semibold mb-2 text-blue-800">Air Pollution</h3>
+                        <p class="text-gray-700">Long-term exposure to high levels of air pollution may slightly increase the risk.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Symptoms Section -->
+        <section id="symptoms" class="py-16 scroll-mt-20">
+            <div class="bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center"><i class="fas fa-head-side-cough mr-2 text-yellow-500"></i>Common Symptoms</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">Lung cancer symptoms may not be apparent in early stages. See a doctor if you experience any of these:</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-lungs text-3xl text-blue-500 mb-2"></i>
+                        <p>Persistent Cough</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-chest-pain text-3xl text-red-500 mb-2"></i>
+                        <p>Chest Pain</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-wind text-3xl text-cyan-500 mb-2"></i>
+                        <p>Shortness of Breath</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-microphone-slash text-3xl text-purple-500 mb-2"></i>
+                        <p>Hoarseness</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-weight-scale text-3xl text-green-500 mb-2"></i>
+                        <p>Unexplained Weight Loss</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-bone text-3xl text-gray-500 mb-2"></i>
+                        <p>Bone Pain</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-head-side-virus text-3xl text-orange-500 mb-2"></i>
+                        <p>Coughing up Blood</p>
+                    </div>
+                    <div class="p-4 bg-gray-100 rounded-lg">
+                        <i class="fas fa-brain text-3xl text-pink-500 mb-2"></i>
+                        <p>Headache</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screening Section -->
+        <section id="screening" class="py-16 scroll-mt-20">
+            <div class="bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center"><i class="fas fa-x-ray mr-2 text-teal-500"></i>Screening Process</h2>
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="flex justify-center">
+                        <img src="https://placehold.co/400x300/E0FBFB/14B8A6?text=CT+Scanner" alt="CT Scanner Machine" class="rounded-lg shadow-md">
+                    </div>
+                    <div>
+                        <p class="text-gray-700 mb-4">Screening is looking for cancer before a person has any symptoms. This can help find cancer at an early stage when it may be easier to treat.</p>
+                        <p class="text-gray-700 mb-4">The recommended screening test for lung cancer is <strong>low-dose computed tomography (LDCT)</strong>. An LDCT scan takes detailed pictures of your lungs, which can show abnormalities that might be cancer.</p>
+                        <h4 class="font-semibold text-lg mb-2">Who should be screened?</h4>
+                        <p class="text-gray-700">Screening is generally recommended for adults aged 50 to 80 years who:</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-600 space-y-2">
+                            <li>Have a 20 pack-year or more smoking history, and</li>
+                            <li>Smoke now or have quit within the past 15 years.</li>
+                        </ul>
+                        <p class="mt-4 text-sm text-gray-500 italic">Consult with your healthcare provider to see if lung cancer screening is right for you.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Prevention Section -->
+        <section id="prevention" class="py-16 scroll-mt-20">
+            <div class="bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center"><i class="fas fa-shield-alt mr-2 text-green-500"></i>Prevention</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">While you can't prevent every case, you can significantly reduce your risk. Here are the most effective steps you can take.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center p-6 border rounded-lg">
+                        <i class="fas fa-smoking-ban text-4xl text-red-500 mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Don't Smoke</h3>
+                        <p>The single most important prevention step. If you smoke, quit. If you don't, never start.</p>
+                    </div>
+                    <div class="text-center p-6 border rounded-lg">
+                        <i class="fas fa-house-damage text-4xl text-purple-500 mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Test for Radon</h3>
+                        <p>Use a home test kit to check for radon levels, especially in your basement.</p>
+                    </div>
+                    <div class="text-center p-6 border rounded-lg">
+                        <i class="fas fa-apple-alt text-4xl text-green-500 mb-4"></i>
+                        <h3 class="text-xl font-semibold mb-2">Eat a Healthy Diet</h3>
+                        <p>A diet rich in fruits and vegetables may help reduce your risk of lung cancer.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto px-6 py-8 text-center">
+            <p class="font-semibold text-lg mb-2">LungHealth AI Project</p>
+            <p class="text-gray-400">This tool is for informational and educational purposes only and does not constitute medical advice.</p>
+            <p class="text-gray-400 mt-1">Always consult a qualified healthcare professional for diagnosis and treatment.</p>
+            <p class="text-sm mt-4 text-gray-500">&copy; 2025 Lung Cancer Prediction using AI & ML. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const menuToggle = document.getElementById('menu-toggle');
+        const closeMenu = document.getElementById('close-menu');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const menuLinks = document.querySelectorAll('.menu-link');
+
+        function openMobileMenu() {
+            mobileMenu.classList.remove('menu-closed');
+            mobileMenu.classList.add('menu-open');
+            menuOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            mobileMenu.classList.remove('menu-open');
+            mobileMenu.classList.add('menu-closed');
+            menuOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        menuToggle.addEventListener('click', openMobileMenu);
+        closeMenu.addEventListener('click', closeMobileMenu);
+        menuOverlay.addEventListener('click', closeMobileMenu);
+        menuLinks.forEach(link => {
+            link.addEventListener('click', closeMobileMenu);
+        });
+    </script>
+
+</body>
+
+</html>
