@@ -309,7 +309,6 @@ def predict_ct_scan_with_uncertainty(model, image_tensor, class_names, device):
         logger.error(f"Error in uncertainty prediction: {e}")
         raise
 
-# -------------- Model Setup ------------------
 model = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_PATH = 'best_lung_cancer_cnn_enhanced.pth'
@@ -518,7 +517,6 @@ def predict():
         if not results:
             return jsonify({'error': 'No valid images processed'}), 400
 
-        # Save to database with enhanced medical information
         if supabase:
             try:
                 record = {
