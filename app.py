@@ -1,323 +1,261 @@
-import os
-import io
-import base64
-import logging
-import datetime
+import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from PIL import Image
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score
-from sklearn.calibration import calibration_curve
-import matplotlib.pyplot as plt
-from dotenv import load_dotenv
-from pathlib import Path
+from flask import Flask, request, jsonify, render_template # Added render_template
+from collections import Counter
+import re
+from typing import Dict, Any
 
-# --- Enhanced Startup Logging ---
-# Load environment variables from a .env file
-env_path = Path(__file__).with_name(".env")
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
-    print(f"Loaded environment variables from: {env_path}")
-else:
-    print(f"Warning: .env file not found at {env_path}. Relying on system environment variables.")
+# ----------------------------------------------------------------------
+# --- 1. Model Definitions (MUST match models in training files) ---
+# ----------------------------------------------------------------------
 
-# --------------- Logging Setup ---------------
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# A. Emotion Detection Model Architecture (from training_test.py)
+class ImprovedEmotionClassifier(nn.Module):
+    """Bi-LSTM with Attention and Classification Layers."""
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, num_classes, num_layers, dropout_prob):
+        super(ImprovedEmotionClassifier, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embedding_dim,
+                           hidden_dim,
+                           num_layers=num_layers,
+                           batch_first=True,
+                           bidirectional=True,
+                           dropout=dropout_prob if num_layers > 1 else 0)
+        self.attention = nn.Linear(hidden_dim * 2, 1)
+        self.batch_norm = nn.BatchNorm1d(hidden_dim * 2)
+        self.fc1 = nn.Linear(hidden_dim * 2, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, num_classes)
+        self.dropout = nn.Dropout(dropout_prob)
+        self.relu = nn.ReLU()
 
-# Log the status of environment variables immediately after loading
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-logger.info(f"SUPABASE_URL loaded: {bool(SUPABASE_URL)}")
-logger.info(f"SUPABASE_KEY loaded: {bool(SUPABASE_KEY)}")
+    def attention_net(self, lstm_output):
+        """Calculates attention weights and context vector."""
+        attention_weights = torch.softmax(self.attention(lstm_output), dim=1)
+        context_vector = torch.sum(attention_weights * lstm_output, dim=1)
+        return context_vector
 
+    def forward(self, x):
+        embedded = self.dropout(self.embedding(x))
+        lstm_out, _ = self.lstm(embedded)
+        attn_output = self.attention_net(lstm_out)
+        attn_output = self.batch_norm(attn_output)
+        out = self.dropout(self.relu(self.fc1(attn_output)))
+        out = self.fc2(out)
+        return out
 
-# ------------- Supabase Setup (Optional) ----------------
-supabase = None
-try:
-    from supabase import create_client, Client
-    if SUPABASE_URL and SUPABASE_KEY:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info("Supabase client initialized successfully.")
+# B. Music Recommendation Model Architecture (from training_music_rec.py)
+class MusicRecommendationModel(nn.Module):
+    def __init__(self, input_size, num_classes):
+        super(MusicRecommendationModel, self).__init__()
+        self.layer_1 = nn.Linear(input_size, 64)
+        self.layer_2 = nn.Linear(64, 32)
+        self.output_layer = nn.Linear(32, num_classes)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.relu(self.layer_1(x))
+        x = self.relu(self.layer_2(x))
+        x = self.output_layer(x)
+        return x
+
+# ----------------------------------------------------------------------
+# --- 2. Utility Functions ---
+# ----------------------------------------------------------------------
+
+def preprocess_text(text: str) -> str:
+    """Simple preprocessing function (must match training preprocessing)."""
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', '', text)  # Remove punctuation/numbers
+    return text
+
+def text_to_sequence(text: str, word_to_idx: Dict[str, int], max_len: int) -> torch.Tensor:
+    """Converts a text string to a padded tensor sequence."""
+    words = preprocess_text(text).split()
+    sequence = [word_to_idx.get(word, word_to_idx.get('<UNK>', 1)) for word in words]
+
+    # Padding/Truncating
+    if len(sequence) > max_len:
+        sequence = sequence[:max_len]
     else:
-        logger.warning("Supabase URL or Key is missing. Database logging will be disabled.")
-except ImportError:
-    logger.warning("Supabase client library not installed. Run 'pip install supabase' to enable database logging.")
-except Exception as e:
-    logger.error(f"An unexpected error occurred during Supabase initialization: {e}")
+        padding = [word_to_idx.get('<PAD>', 0)] * (max_len - len(sequence))
+        sequence.extend(padding)
 
+    return torch.tensor([sequence], dtype=torch.long)
 
-# --------------- Flask Setup -----------------
+def get_inverse_mapping(mappings: Dict[str, Dict[Any, Any]]) -> Dict[str, Dict[Any, Any]]:
+    """Generates inverse mappings for decoding encoded labels back to original strings."""
+    inverse_mappings = {}
+    for key, forward_map in mappings.items():
+        inverse_mappings[key] = {v: k for k, v in forward_map.items()}
+    return inverse_mappings
+
+# ----------------------------------------------------------------------
+# --- 3. Global Initialization and Model Loading ---
+# ----------------------------------------------------------------------
+
 app = Flask(__name__)
-CORS(app)
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# ========================================
-# ADVANCED MEDICAL CNN (MATCHING TRAINING SCRIPT)
-# ========================================
-
-class AdvancedMedicalCNN(nn.Module):
-    """
-    Advanced CNN architecture optimized for grayscale medical imaging.
-    This MUST match the architecture from the training script.
-    """
-    def __init__(self, num_classes, dropout_rate=0.4):
-        super().__init__()
-        self.dropout_rate = dropout_rate
-        self.conv1 = nn.Sequential(
-            nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False),
-            nn.BatchNorm2d(64), nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        )
-        self.res_block1 = self._make_residual_block(64, 128, stride=1)
-        self.res_block2 = self._make_residual_block(128, 256, stride=2)
-        self.res_block3 = self._make_residual_block(256, 512, stride=2)
-        self.res_block4 = self._make_residual_block(512, 512, stride=2)
-        self.spatial_attention = SpatialAttentionModule()
-        self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(512, 512), nn.BatchNorm1d(512), nn.ReLU(inplace=True), nn.Dropout(dropout_rate),
-            nn.Linear(512, 256), nn.BatchNorm1d(256), nn.ReLU(inplace=True), nn.Dropout(dropout_rate),
-            nn.Linear(256, num_classes)
-        )
-        self._initialize_weights()
-
-    def _make_residual_block(self, in_channels, out_channels, stride):
-        return ResidualBlock(in_channels, out_channels, stride)
-
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight)
-                nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.res_block1(x)
-        x = self.res_block2(x)
-        x = self.res_block3(x)
-        x = self.res_block4(x)
-        x = self.spatial_attention(x)
-        x = self.global_avg_pool(x)
-        return self.classifier(x)
-
-class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
-        super().__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, 3, stride, 1, bias=False)
-        self.bn1 = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, 3, 1, 1, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_channels)
-        self.skip = nn.Sequential()
-        if stride != 1 or in_channels != out_channels:
-            self.skip = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, 1, stride, bias=False),
-                nn.BatchNorm2d(out_channels)
-            )
-        self.dropout = nn.Dropout2d(0.2)
-    
-    def forward(self, x):
-        identity = self.skip(x)
-        out = self.relu(self.bn1(self.conv1(x)))
-        out = self.dropout(out)
-        out = self.bn2(self.conv2(out))
-        out += identity
-        return self.relu(out)
-
-class SpatialAttentionModule(nn.Module):
-    def __init__(self, kernel_size=7):
-        super().__init__()
-        self.conv = nn.Conv2d(2, 1, kernel_size, padding=kernel_size//2, bias=False)
-        self.sigmoid = nn.Sigmoid()
-    
-    def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        attention = self.sigmoid(self.conv(torch.cat([avg_out, max_out], dim=1)))
-        return x * attention
-
-# -------------- Model Loading and Preprocessing ------------------
-
-model = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = 'best_model.pth'
-class_names = ['Normal', 'Benign', 'Malignant'] # Default class names
 
-# Preprocessing pipeline for Grayscale images (to match training)
-preprocess = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.Grayscale(num_output_channels=1),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5], [0.5]),
-])
+emotion_model = None
+music_rec_model = None
+song_df = None # To hold our song "database"
+emotion_params = {}
+music_rec_mappings = {}
+music_rec_inverse_mappings = {}
 
-def load_model_at_startup():
-    global model, class_names
-    if not os.path.exists(MODEL_PATH):
-        logger.error(f"Model file not found at '{MODEL_PATH}'. Please ensure the model is trained and the file is in the correct directory.")
-        return
+def load_models():
+    global emotion_model, music_rec_model, song_df, emotion_params, music_rec_mappings, music_rec_inverse_mappings
 
+    # --- Load Song Dataset ---
+    SONG_DATASET_PATH = 'cleaned_music_sentiment_dataset.csv'
     try:
-        logger.info(f"Loading model from: {MODEL_PATH}")
-        checkpoint = torch.load(MODEL_PATH, map_location=device)
-        
-        if 'class_names' in checkpoint and checkpoint['class_names']:
-            class_names = checkpoint['class_names']
-        else:
-            logger.warning("Class names not found in checkpoint, using default.")
-        
-        num_classes = len(class_names)
-        
-        model = AdvancedMedicalCNN(num_classes=num_classes)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.to(device)
-        model.eval()
-        
-        logger.info(f"Model loaded successfully. Classes: {class_names}")
-
+        print(f"Loading song dataset from {SONG_DATASET_PATH}...")
+        song_df = pd.read_csv(SONG_DATASET_PATH)
+        print("Song dataset loaded successfully.")
+    except FileNotFoundError:
+        print(f"ERROR: Song dataset not found at '{SONG_DATASET_PATH}'. Please ensure the file is in the correct directory.")
+        song_df = None
     except Exception as e:
-        logger.error(f"Failed to load model from {MODEL_PATH}: {e}", exc_info=True)
-        model = None
-
-# -------------- Helper and Prediction Functions ------------------
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
-def predict_single_image(image_path):
-    """Predicts a single image, returns a dict with results or an error."""
+        print(f"Error loading song dataset: {e}")
+        song_df = None
+        
+    # --- Load Emotion Detection Model (Model A) ---
+    EMOTION_MODEL_PATH = 'emotion_detection_pytorch_improved.pth'
     try:
-        image = Image.open(image_path).convert('L') # Ensure image is grayscale
-        tensor = preprocess(image).unsqueeze(0).to(device)
-        
-        with torch.no_grad():
-            outputs = model(tensor)
-            probabilities = F.softmax(outputs, dim=1)[0]
-            confidence, predicted_idx = torch.max(probabilities, 0)
-            
-            result = {
-                "predicted_class_name": class_names[predicted_idx.item()],
-                "confidence_percentage": int(round(confidence.item() * 100))
-            }
-        return result
+        print(f"Loading Emotion Model from {EMOTION_MODEL_PATH}...")
+        emotion_checkpoint = torch.load(EMOTION_MODEL_PATH, map_location=device, weights_only=False)
+        emotion_model = ImprovedEmotionClassifier(
+            vocab_size=emotion_checkpoint['vocab_size'],
+            embedding_dim=emotion_checkpoint['embedding_dim'],
+            hidden_dim=emotion_checkpoint['hidden_dim'],
+            num_classes=emotion_checkpoint['num_classes'],
+            num_layers=emotion_checkpoint['num_layers'],
+            dropout_prob=emotion_checkpoint['dropout_prob']
+        ).to(device)
+        emotion_model.load_state_dict(emotion_checkpoint['model_state_dict'])
+        emotion_model.eval()
+        emotion_params['word_to_idx'] = emotion_checkpoint['word_to_idx']
+        emotion_params['int_to_label'] = emotion_checkpoint['int_to_label']
+        emotion_params['max_len'] = emotion_checkpoint['max_len']
+        print("Emotion Model loaded successfully.")
     except Exception as e:
-        logger.error(f"Error during prediction for {image_path}: {e}", exc_info=True)
-        return {"error": "Failed to process image."}
+        print(f"Error loading Emotion Model: {e}")
+        emotion_model = None
 
-# --------------- API Routes ----------------------
+    # --- Load Music Recommendation Model (Model B) ---
+    MUSIC_REC_MODEL_PATH = 'music_recommendation_pytorch.pth'
+    try:
+        print(f"Loading Music Recommendation Model from {MUSIC_REC_MODEL_PATH}...")
+        music_checkpoint = torch.load(MUSIC_REC_MODEL_PATH, map_location=device)
+        music_rec_mappings = music_checkpoint['mappings']
+        music_rec_inverse_mappings = get_inverse_mapping(music_rec_mappings)
+        INPUT_SIZE = 4 # Hardcoded for consistency with training
+        NUM_CLASSES = len(music_rec_mappings['Sentiment_Label'])
+        music_rec_model = MusicRecommendationModel(input_size=INPUT_SIZE, num_classes=NUM_CLASSES).to(device)
+        music_rec_model.load_state_dict(music_checkpoint['model_state_dict'])
+        music_rec_model.eval()
+        print("Music Recommendation Model loaded successfully.")
+    except Exception as e:
+        print(f"Error loading Music Recommendation Model: {e}")
+        music_rec_model = None
+
+load_models() # Load models and data when the application starts
+
+# ----------------------------------------------------------------------
+# --- 4. API Endpoints ---
+# ----------------------------------------------------------------------
 
 @app.route('/')
 def home():
-    return render_template('frontpage.html')
-
-@app.route('/detector')
-def detector():
+    """Renders the frontend HTML page."""
     return render_template('index.html')
 
-@app.route('/model_status', methods=['GET'])
-def model_status():
+@app.route('/recommend', methods=['POST'])
+def recommend():
+    """
+    Main API endpoint:
+    1. Detects emotion from user text.
+    2. Maps emotion to a music profile.
+    3. Predicts a music sentiment based on the profile.
+    4. Recommends songs from the dataset with that sentiment.
+    """
+    if emotion_model is None or music_rec_model is None:
+        return jsonify({"error": "Models failed to load. Check console for details."}), 500
+
+    data = request.get_json()
+    user_text = data.get('text', '')
+
+    if not user_text:
+        return jsonify({"error": "No text provided for emotion detection."}), 400
+
+    # --- STEP 1: Emotion Detection ---
+    try:
+        sequence = text_to_sequence(user_text, emotion_params['word_to_idx'], emotion_params['max_len']).to(device)
+        with torch.no_grad():
+            emotion_output = emotion_model(sequence)
+            _, predicted_emotion_int = torch.max(emotion_output, 1)
+        predicted_emotion_label = emotion_params['int_to_label'].get(predicted_emotion_int.item(), 'Unknown')
+        if isinstance(predicted_emotion_label, np.integer):
+            predicted_emotion_label = int(predicted_emotion_label)
+    except Exception as e:
+        print(f"Error during Emotion Detection: {e}")
+        return jsonify({"error": f"Failed to run Emotion Detection: {e}"}), 500
+
+    # --- STEP 2: Map Emotion to Music Profile ---
+    emotion_to_rec_profile = {
+        'joy': {'Genre': 'Pop', 'Mood': 'Happy', 'Energy': 'High', 'Danceability': 'High'},
+        'sadness': {'Genre': 'Acoustic', 'Mood': 'Calm', 'Energy': 'Low', 'Danceability': 'Low'},
+        'anger': {'Genre': 'Rock', 'Mood': 'Aggressive', 'Energy': 'High', 'Danceability': 'Medium'},
+        'fear': {'Genre': 'Ambient', 'Mood': 'Calm', 'Energy': 'Low', 'Danceability': 'Low'},
+        'love': {'Genre': 'R&B', 'Mood': 'Romantic', 'Energy': 'Medium', 'Danceability': 'Medium'},
+        'surprise': {'Genre': 'EDM', 'Mood': 'Excited', 'Energy': 'High', 'Danceability': 'High'},
+    }
+    rec_profile = emotion_to_rec_profile.get(predicted_emotion_label, {'Genre': 'Instrumental', 'Mood': 'Neutral', 'Energy': 'Medium', 'Danceability': 'Medium'})
+    
+    try:
+        rec_features = [music_rec_mappings[f].get(rec_profile[f], 0) for f in ['Genre', 'Mood', 'Energy', 'Danceability']]
+        rec_features_tensor = torch.tensor([rec_features], dtype=torch.float32).to(device)
+    except Exception as e:
+        print(f"Error during feature encoding: {e}")
+        return jsonify({"error": f"Failed to encode music features: {e}"}), 500
+
+    # --- STEP 3: Music Sentiment Prediction ---
+    try:
+        with torch.no_grad():
+            music_output = music_rec_model(rec_features_tensor)
+            _, predicted_sentiment_int = torch.max(music_output, 1)
+        predicted_sentiment_label = music_rec_inverse_mappings['Sentiment_Label'].get(predicted_sentiment_int.item(), 'Unknown')
+        if isinstance(predicted_sentiment_label, np.integer):
+            predicted_sentiment_label = int(predicted_sentiment_label)
+    except Exception as e:
+        print(f"Error during Music Recommendation: {e}")
+        return jsonify({"error": f"Failed to run Music Recommendation: {e}"}), 500
+        
+    # --- STEP 4: Song Selection ---
+    recommended_songs = []
+    if song_df is not None and predicted_sentiment_label != 'Unknown':
+        matching_songs = song_df[song_df['Sentiment_Label'] == predicted_sentiment_label]
+        if not matching_songs.empty:
+            num_to_recommend = min(len(matching_songs), 5)
+            recommended_songs_df = matching_songs.sample(n=num_to_recommend)
+            recommended_songs = recommended_songs_df[['Song_Title', 'Artist']].to_dict(orient='records')
+
+    # --- Final Response ---
+    if recommended_songs:
+        final_recommendation = f"Based on your detected emotion, here are some songs with a '{predicted_sentiment_label}' vibe:"
+    else:
+        final_recommendation = f"Based on your emotion, we recommend music with a '{predicted_sentiment_label}' sentiment. Add songs to the dataset to get specific recommendations."
+    
     return jsonify({
-        'loaded': model is not None,
-        'message': 'Model ready' if model else 'Model not loaded',
-        'device': str(device),
-        'class_names': class_names
+        "input_text": user_text,
+        "detected_emotion": predicted_emotion_label,
+        "recommended_music_sentiment": predicted_sentiment_label,
+        "final_recommendation": final_recommendation,
+        "recommended_songs": recommended_songs
     })
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    if model is None:
-        return jsonify({'error': 'Model is not loaded, please wait or check server logs.'}), 503
-
-    if 'images' not in request.files:
-        logger.warning(f"'/predict' called without 'images' key. Keys found: {list(request.files.keys())}")
-        return jsonify({
-            'error': 'No image files provided. Ensure files are sent under the key "images".',
-            'received_keys': list(request.files.keys())
-        }), 400
-
-    files = request.files.getlist('images')
-    if not files or all(f.filename == '' for f in files):
-        return jsonify({'error': 'No files selected for upload.'}), 400
-    
-    patient_info = {
-        'patientName': request.form.get('patientName', 'Anonymous'),
-        'patientAge': request.form.get('patientAge'),
-        'patientGender': request.form.get('patientGender'),
-        'smokingHistory': request.form.get('smokingHistory'),
-    }
-    
-    prediction_results = []
-    for file in files:
-        if file and allowed_file(file.filename):
-            filename = file.filename
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            try:
-                file.save(path)
-                result = predict_single_image(path)
-                result['filename'] = filename
-                prediction_results.append(result)
-            except Exception as e:
-                logger.error(f"Error processing file {filename}: {e}", exc_info=True)
-                prediction_results.append({'filename': filename, 'error': 'Server failed to process this image.'})
-            finally:
-                if os.path.exists(path):
-                    os.remove(path)
-        elif file:
-            prediction_results.append({'filename': file.filename, 'error': 'File type not allowed.'})
-            
-    # Log the first valid prediction to Supabase if available
-    if supabase:
-        first_valid_result = next((r for r in prediction_results if 'error' not in r), None)
-        if first_valid_result:
-            try:
-                # *** SOLUTION: Add all patient info to the record ***
-                record = {
-                    'patient_name': patient_info['patientName'],
-                    'patient_age': patient_info['patientAge'],
-                    'patient_gender': patient_info['patientGender'],
-                    'smoking_history': patient_info['smokingHistory'],
-                    'prediction': first_valid_result.get('predicted_class_name'),
-                    'confidence': first_valid_result.get('confidence_percentage'),
-                    'model_version': 'AdvancedMedicalCNN_v1',
-                    'prediction_timestamp': datetime.datetime.now().isoformat(),
-                    'image_count': len(files)
-                }
-                logger.info(f"Attempting to insert record into Supabase: {record}")
-                response = supabase.table('predictions').insert(record).execute()
-                
-                if response.data:
-                    logger.info(f"Supabase insert successful. Response data: {response.data}")
-                else:
-                    logger.error(f"Supabase insert failed. Full response: {response}")
-
-            except Exception as e:
-                logger.error(f"Database save failed with an exception: {e}", exc_info=True)
-
-    final_response = {
-        'patient_info': patient_info,
-        'results': prediction_results
-    }
-    
-    return jsonify(final_response)
-
-# --------------- Run App -----------------------
 if __name__ == '__main__':
-    logger.info("--- Starting Flask Application ---")
-    load_model_at_startup()
     app.run(debug=True, host='0.0.0.0', port=5008)
 
