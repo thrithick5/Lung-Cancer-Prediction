@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Lung Cancer Detection</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* Base styles and components */
+        
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #334155;
-            padding-top: 120px;
+            padding-top: 100px;
+            /* Adjusted for header */
         }
         
         header {
@@ -22,13 +24,7 @@
             top: 0;
             width: 100%;
             z-index: 1000;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tab-active {
-            border-color: #4f46e5;
-            color: #4f46e5;
-            background-color: #eef2ff;
+            backdrop-filter: blur(8px);
         }
         
         .interactive-card {
@@ -36,8 +32,8 @@
         }
         
         .interactive-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.07);
         }
         
         .interactive-button {
@@ -66,132 +62,37 @@
                 transform: rotate(360deg);
             }
         }
-        /* Enhanced Input Styling for Light Mode */
-        
-        .form-input {
-            background-color: #ffffff;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
-            background-color: #fefefe;
-        }
-        
-        .form-input:hover {
-            border-color: #cbd5e1;
-            background-color: #fefefe;
-        }
-        
-        .form-label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            display: block;
-            font-size: 14px;
-        }
-        /* Dark mode overrides */
-        
-        html.dark body {
-            background-color: #1e293b;
-            color: #e2e8f0;
-        }
-        
-        html.dark .bg-white {
-            background-color: #334155;
-            border-color: #475569;
-        }
-        
-        html.dark .text-slate-800 {
-            color: #f8fafc;
-        }
-        
-        html.dark .text-slate-600 {
-            color: #cbd5e1;
-        }
-        
-        html.dark .border-slate-200 {
-            border-color: #475569;
-        }
-        
-        html.dark .bg-blue-100 {
-            background-color: #1e3a8a;
-        }
-        /* Dark mode form inputs */
-        
-        html.dark .form-input {
-            background-color: #475569;
-            border-color: #64748b;
-            color: #f8fafc;
-        }
-        
-        html.dark .form-input:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0, 0, 0, 0.3);
-            background-color: #64748b;
-        }
-        
-        html.dark .form-input:hover {
-            border-color: #94a3b8;
-            background-color: #64748b;
-        }
-        
-        html.dark .form-label {
-            color: #f1f5f9;
-        }
-        
-        html.dark .form-input::placeholder {
-            color: #94a3b8;
-        }
-        /* Enhanced select dropdown styling */
+        /* Form styling using utility classes in HTML now */
         
         .form-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 12px center;
             background-repeat: no-repeat;
             background-size: 16px 12px;
             padding-right: 40px;
         }
-        
-        html.dark .form-select {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%94a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-        }
     </style>
 </head>
 
-<body class="antialiased text-slate-700">
+<body class="antialiased bg-slate-50 text-slate-700">
 
-    <header class="mb-8 bg-blue-100 p-8">
-        <div class="container mx-auto flex justify-between items-center">
+    <header class="bg-white/80 border-b border-slate-200">
+        <div class="container mx-auto flex justify-between items-center p-4 md:p-6">
             <div>
-                <h1 class="text-3xl font-bold text-slate-800">AI Lung Cancer Detection</h1>
-                <p class="text-slate-500 mt-1">Advanced analysis for early detection.</p>
+                <h1 class="text-2xl font-bold text-slate-800">AI Lung Cancer Detection</h1>
+                <p class="text-slate-500 mt-1 text-sm">Advanced analysis for early detection.</p>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="/" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 interactive-button" title="Go to Homepage">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <a href="/" class="p-2 rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 interactive-button" title="Go to Homepage">
+                    <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                 </a>
                 <div id="modelStatus" class="flex items-center space-x-2 text-sm font-semibold">
                     <div id="modelStatusDot" class="w-3 h-3 rounded-full bg-gray-400 animate-pulse"></div>
-                    <span id="modelStatusText" class="text-gray-500">Connecting...</span>
+                    <span id="modelStatusText" class="text-slate-500">Connecting...</span>
                 </div>
-                <button id="themeToggle" class="p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 interactive-button">
-                    <svg id="moonIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                    </svg>
-                    <svg id="sunIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                        d="M12 3v1m0 16v1m9-9h1M4 12H3m15.354 3.354l-.707.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                </button>
             </div>
         </div>
     </header>
@@ -205,32 +106,32 @@
                             <h2 class="text-lg font-semibold text-slate-800 mb-6">1. Patient Information</h2>
                             <form id="patientForm" class="space-y-6">
                                 <div>
-                                    <label for="patientName" class="form-label">Patient Name *</label>
-                                    <input type="text" id="patientName" name="patientName" required class="form-input w-full" placeholder="Enter patient's full name" minlength="2">
+                                    <label for="patientName" class="block mb-2 text-sm font-semibold text-slate-700">Patient Name *</label>
+                                    <input type="text" id="patientName" name="patientName" required class="w-full bg-white border-2 border-slate-200 rounded-md p-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Enter patient's full name" minlength="2">
                                 </div>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label for="patientAge" class="form-label">Age *</label>
-                                        <input type="number" id="patientAge" name="patientAge" required class="form-input w-full" placeholder="Age" min="1" max="120">
+                                        <label for="patientAge" class="block mb-2 text-sm font-semibold text-slate-700">Age *</label>
+                                        <input type="number" id="patientAge" name="patientAge" required class="w-full bg-white border-2 border-slate-200 rounded-md p-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Age" min="1" max="120">
                                     </div>
                                     <div>
-                                        <label for="patientGender" class="form-label">Gender *</label>
-                                        <select id="patientGender" name="patientGender" required class="form-input form-select w-full">
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                </select>
+                                        <label for="patientGender" class="block mb-2 text-sm font-semibold text-slate-700">Gender *</label>
+                                        <select id="patientGender" name="patientGender" required class="form-select w-full bg-white border-2 border-slate-200 rounded-md p-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            <option value="">Select gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div>
-                                    <label for="smokingHistory" class="form-label">Smoking History *</label>
-                                    <select id="smokingHistory" name="smokingHistory" required class="form-input form-select w-full">
-                <option value="">Select smoking history</option>
-                <option value="Never Smoked">Never Smoked</option>
-                <option value="Former Smoker">Former Smoker</option>
-                <option value="Current Smoker">Current Smoker</option>
-            </select>
+                                    <label for="smokingHistory" class="block mb-2 text-sm font-semibold text-slate-700">Smoking History *</label>
+                                    <select id="smokingHistory" name="smokingHistory" required class="form-select w-full bg-white border-2 border-slate-200 rounded-md p-3 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                        <option value="">Select history</option>
+                                        <option value="Never Smoked">Never Smoked</option>
+                                        <option value="Former Smoker">Former Smoker</option>
+                                        <option value="Current Smoker">Current Smoker</option>
+                                    </select>
                                 </div>
                             </form>
                         </div>
@@ -239,12 +140,9 @@
                             <h2 class="text-lg font-semibold text-slate-800 mb-4">2. Upload CT Scans</h2>
                             <div id="imageUploadArea" class="mt-1 flex justify-center rounded-md border-2 border-dashed border-slate-300 px-6 pt-5 pb-6 hover:border-indigo-500 cursor-pointer transition-colors duration-200">
                                 <div class="space-y-1 text-center">
-                                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" 
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                    </svg>
+                                    <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                                     <div class="flex text-sm text-slate-600">
-                                        <label for="imageInput" class="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 hover:text-indigo-500">
+                                        <label for="imageInput" class="relative cursor-pointer rounded-md bg-transparent font-medium text-indigo-600 hover:text-indigo-500">
                                             <span>Upload files</span>
                                             <input id="imageInput" name="images" type="file" class="sr-only" multiple accept=".jpg,.jpeg,.png">
                                         </label>
@@ -257,22 +155,15 @@
                         </div>
 
                         <div class="flex space-x-4">
-                            <button id="analyzeBtn" type="button" class="w-full inline-flex justify-center items-center rounded-md bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 interactive-button">
-                                Analyze
-                            </button>
-                            <button id="clearBtn" type="button" class="w-full inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 hover:dark:bg-slate-600 interactive-button">
-                                Clear
-                            </button>
+                            <button id="analyzeBtn" type="button" class="w-full inline-flex justify-center items-center rounded-md bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700 disabled:bg-indigo-300 interactive-button">Analyze</button>
+                            <button id="clearBtn" type="button" class="w-full inline-flex justify-center rounded-md border border-slate-300 bg-white px-6 py-3 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 interactive-button">Clear</button>
                         </div>
                     </div>
 
                     <div class="lg:col-span-7">
                         <div id="resultsContainer" class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 interactive-card min-h-[400px]">
                             <div id="resultsPlaceholder" class="flex flex-col items-center justify-center h-full text-center">
-                                <svg class="w-16 h-16 text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" 
-                                        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                                </svg>
+                                <svg class="w-16 h-16 text-slate-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
                                 <h3 class="mt-4 text-lg font-semibold text-slate-800">Analysis Results</h3>
                                 <p class="mt-1 text-sm text-slate-500">Results will be displayed here after analysis.</p>
                             </div>
@@ -291,7 +182,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const app = {
-                API_BASE_URL: 'http://127.0.0.1:5008',
+                API_BASE_URL: 'http://localhost:5008',
                 analysis: {
                     form: document.getElementById('patientForm'),
                     uploadArea: document.getElementById('imageUploadArea'),
@@ -309,15 +200,11 @@
                     dot: document.getElementById('modelStatusDot'),
                     text: document.getElementById('modelStatusText'),
                 },
-                themeToggle: document.getElementById('themeToggle'),
-                moonIcon: document.getElementById('moonIcon'),
-                sunIcon: document.getElementById('sunIcon'),
                 selectedFiles: [],
 
                 init() {
                     this.checkModelStatus();
                     this.bindEvents();
-                    this.applySavedTheme();
                 },
 
                 bindEvents() {
@@ -329,7 +216,6 @@
                     this.analysis.uploadArea.addEventListener('drop', (e) => this.handleFileSelect(e.dataTransfer.files), false);
                     this.analysis.analyzeBtn.addEventListener('click', () => this.runAnalysis());
                     this.analysis.clearBtn.addEventListener('click', () => this.clearForm());
-                    this.themeToggle.addEventListener('click', () => this.toggleTheme());
                 },
 
                 preventDefaults(e) {
@@ -340,16 +226,37 @@
                 async checkModelStatus() {
                     try {
                         const response = await fetch(`${this.API_BASE_URL}/model_status`);
+                        if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
                         const data = await response.json();
                         if (data.loaded) {
-                            this.modelStatus.dot.classList.replace('bg-gray-400', 'bg-green-500');
+                            this.modelStatus.dot.className = 'w-3 h-3 rounded-full bg-green-500';
+                            this.modelStatus.text.className = 'font-semibold text-green-600';
                             this.modelStatus.text.textContent = 'Model Ready';
-                            this.modelStatus.text.classList.replace('text-gray-500', 'text-green-600');
-                        } else throw new Error('Model not loaded');
-                    } catch {
-                        this.modelStatus.dot.classList.replace('bg-gray-400', 'bg-red-500');
-                        this.modelStatus.text.textContent = 'Model Error';
-                        this.modelStatus.text.classList.replace('text-gray-500', 'text-red-600');
+                        } else {
+                            throw new Error(data.message || 'Model not loaded on backend.');
+                        }
+                    } catch (e) {
+                        console.error("Model status check failed:", e);
+                        this.modelStatus.dot.className = 'w-3 h-3 rounded-full bg-red-500';
+                        this.modelStatus.text.className = 'font-semibold text-red-600';
+                        this.modelStatus.text.textContent = 'Connection Error';
+
+                        this.results.placeholder.classList.add('hidden');
+                        this.results.loading.classList.add('hidden');
+                        this.results.content.classList.remove('hidden');
+                        this.results.content.innerHTML = `
+                            <div class="flex flex-col items-center justify-center h-full text-center">
+                                <svg class="w-16 h-16 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                </svg>
+                                <h3 class="mt-4 text-lg font-semibold text-red-700">Connection to Backend Failed</h3>
+                                <p class="mt-1 text-sm text-slate-500">
+                                    Could not connect to the analysis server at <strong>${this.API_BASE_URL}</strong>.
+                                    <br>Please ensure the backend Python script ('app.py') is running and accessible.
+                                </p>
+                                <p class="mt-2 text-xs text-slate-400">Error details: ${e.message}</p>
+                            </div>
+                        `;
                     }
                 },
 
@@ -362,7 +269,7 @@
                         this.selectedFiles.forEach(file => {
                             const li = document.createElement('li');
                             li.className = 'py-2 flex justify-between items-center text-sm';
-                            li.innerHTML = `<span>${file.name}</span><span class="text-xs text-slate-500">${(file.size/1024).toFixed(1)} KB</span>`;
+                            li.innerHTML = `<span class="text-slate-800">${file.name}</span><span class="text-xs text-slate-500">${(file.size/1024).toFixed(1)} KB</span>`;
                             list.appendChild(li);
                         });
                         this.analysis.fileList.appendChild(list);
@@ -370,95 +277,26 @@
                 },
 
                 clearForm() {
-                    // Reset the form
                     this.analysis.form.reset();
-
-                    // Explicitly reset select fields to ensure they're empty
-                    document.getElementById('patientName').value = '';
-                    document.getElementById('patientAge').value = '';
-                    document.getElementById('patientGender').value = '';
-                    document.getElementById('smokingHistory').value = '';
-
-                    // Clear file-related data
                     this.selectedFiles = [];
                     this.analysis.fileList.innerHTML = '';
                     this.analysis.imageInput.value = '';
-
-                    // Reset results display
                     this.results.placeholder.classList.remove('hidden');
                     this.results.content.classList.add('hidden');
                     this.results.loading.classList.add('hidden');
                     this.results.content.innerHTML = '';
-
-                    // Re-enable analyze button if it was disabled
                     this.analysis.analyzeBtn.disabled = false;
-
-                    console.log('Form cleared successfully');
                 },
 
                 validateForm() {
-                    const f = this.analysis.form;
-
-                    // Check patient name
-                    const patientName = f.patientName.value.trim();
-                    if (!patientName || patientName.length < 2) {
-                        alert("Patient name is required and must be at least 2 characters long.");
-                        f.patientName.focus();
+                    if (!this.analysis.form.checkValidity()) {
+                        alert("Please fill out all required patient information fields correctly.");
                         return false;
                     }
-
-                    // Validate name pattern (only letters, spaces, hyphens, apostrophes)
-                    const namePattern = /^[a-zA-Z\s\-'\.]+$/;
-                    if (!namePattern.test(patientName)) {
-                        alert("Patient name can only contain letters, spaces, hyphens, and apostrophes.");
-                        f.patientName.focus();
-                        return false;
-                    }
-
-                    // Check age
-                    const age = parseInt(f.patientAge.value);
-                    if (!age || isNaN(age) || age < 1 || age > 120) {
-                        alert("Please enter a valid age between 1 and 120.");
-                        f.patientAge.focus();
-                        return false;
-                    }
-
-                    // Check gender
-                    if (!f.patientGender.value || f.patientGender.value === "") {
-                        alert("Please select a gender.");
-                        f.patientGender.focus();
-                        return false;
-                    }
-
-                    // Check smoking history
-                    if (!f.smokingHistory.value || f.smokingHistory.value === "") {
-                        alert("Please select smoking history.");
-                        f.smokingHistory.focus();
-                        return false;
-                    }
-
-                    // Check files
                     if (this.selectedFiles.length === 0) {
                         alert("Please upload at least one CT scan image.");
-                        this.analysis.imageInput.focus();
                         return false;
                     }
-
-                    // Validate file types and sizes
-                    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-                    const maxSize = 10 * 1024 * 1024; // 10MB
-
-                    for (let file of this.selectedFiles) {
-                        if (!allowedTypes.includes(file.type)) {
-                            alert(`Invalid file type: ${file.name}. Only JPG, JPEG, and PNG files are allowed.`);
-                            return false;
-                        }
-                        if (file.size > maxSize) {
-                            alert(`File too large: ${file.name}. Maximum size is 10MB.`);
-                            return false;
-                        }
-                    }
-
                     return true;
                 },
 
@@ -470,98 +308,28 @@
                     this.results.content.classList.add('hidden');
                     this.analysis.analyzeBtn.disabled = true;
 
-                    const formData = new FormData();
-                    const f = this.analysis.form;
-
-                    // Collect and clean form data
-                    const patientData = {
-                        patientName: f.patientName.value.trim(),
-                        patientAge: f.patientAge.value.trim(),
-                        patientGender: f.patientGender.value,
-                        smokingHistory: f.smokingHistory.value
-                    };
-
-                    console.log('Sending patient data:', patientData);
-
-                    // Append each field individually with validation
-                    Object.entries(patientData).forEach(([key, value]) => {
-                        if (value && value !== "") {
-                            formData.append(key, value);
-                            console.log(`Added ${key}: ${value}`);
-                        } else {
-                            console.error(`Missing or empty required field: ${key}`);
-                        }
-                    });
-
-                    // Add images
-                    this.selectedFiles.forEach((file, index) => {
-                        formData.append('images', file);
-                        console.log(`Added image ${index + 1}: ${file.name} (${file.type}, ${file.size} bytes)`);
-                    });
-
-                    // Debug: Log all FormData contents
-                    console.log('Complete FormData contents:');
-                    for (let [key, value] of formData.entries()) {
-                        if (value instanceof File) {
-                            console.log(`${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
-                        } else {
-                            console.log(`${key}: "${value}"`);
-                        }
-                    }
+                    const formData = new FormData(this.analysis.form);
+                    this.selectedFiles.forEach(file => formData.append('images', file));
 
                     try {
-                        console.log(`Making request to: ${this.API_BASE_URL}/predict`);
-
                         const res = await fetch(`${this.API_BASE_URL}/predict`, {
                             method: 'POST',
                             body: formData
                         });
-
-                        console.log(`Response status: ${res.status} ${res.statusText}`);
-
                         const data = await res.json();
-                        console.log('Server response:', data);
-
-                        if (res.ok) {
-                            this.displayResults(data);
-                        } else {
-                            console.error('Server error response:', data);
-
-                            // Show detailed error information
-                            let errorMessage = data.error || `Server error: ${res.status}`;
-                            if (data.error_details) {
-                                errorMessage += `\nType: ${data.error_details.error_type}`;
-                                errorMessage += `\nDetails: ${data.error_details.error_message}`;
-                            }
-                            if (data.received_keys) {
-                                errorMessage += `\nReceived form keys: ${data.received_keys.join(', ')}`;
-                            }
-
-                            throw new Error(errorMessage);
-                        }
+                        if (!res.ok) throw new Error(data.error || 'Analysis failed');
+                        this.displayResults(data);
                     } catch (e) {
-                        console.error('Request failed:', e);
-
                         this.results.content.innerHTML = `
-                    <div class="text-red-500 p-6 bg-red-50 rounded-lg border border-red-200">
-                        <h4 class="font-semibold mb-3 text-lg">Analysis Failed</h4>
-                        <div class="space-y-2">
-                            <p><strong>Error:</strong> ${e.message}</p>
-                            <details class="mt-4">
-                                <summary class="cursor-pointer text-sm font-medium text-red-700 hover:text-red-800">
-                                    Show Technical Details
-                                </summary>
-                                <div class="mt-2 text-xs font-mono bg-red-100 p-3 rounded border">
-                                    <p><strong>Request URL:</strong> ${this.API_BASE_URL}/predict</p>
-                                    <p><strong>Files:</strong> ${this.selectedFiles.map(f => f.name).join(', ')}</p>
-                                    <p><strong>Form Data:</strong> Check browser console for full details</p>
-                                </div>
-                            </details>
-                            <p class="text-sm mt-3 text-red-600">
-                                Open browser developer tools (F12) → Console tab for detailed error information.
-                            </p>
-                        </div>
-                    </div>`;
+                            <div class="flex flex-col items-center justify-center h-full text-center">
+                                <svg class="w-16 h-16 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                                </svg>
+                                <h3 class="mt-4 text-lg font-semibold text-red-700">Analysis Failed</h3>
+                                <p class="mt-1 text-sm text-slate-500">An error occurred during the analysis. Please try again or check the server logs.</p>
+                                <p class="mt-2 text-xs text-slate-400">Error details: ${e.message}</p>
+                            </div>
+                        `;
                     } finally {
                         this.results.loading.classList.add('hidden');
                         this.results.content.classList.remove('hidden');
@@ -574,60 +342,84 @@
                         patient_info,
                         results
                     } = data;
-                    let html = `<h3 class="text-xl font-bold mb-2">Analysis for ${patient_info.patientName}</h3>`;
-                    html += `<p class="text-sm mb-6">Age: ${patient_info.patientAge}, Gender: ${patient_info.patientGender}, Smoking: ${patient_info.smokingHistory}</p>`;
+
+                    let html = `<h3 class="text-xl font-bold text-slate-800 mb-2">Analysis for ${patient_info.patientName}</h3>`;
+                    html += `<div class="text-sm text-slate-600 mb-6 bg-slate-100 p-3 rounded-lg">
+                        <strong>Patient Details:</strong> Age: ${patient_info.patientAge}, Gender: ${patient_info.patientGender}, Smoking: ${patient_info.smokingHistory}
+                    </div>`;
+
+                    html += '<div class="space-y-4">';
+
                     results.forEach(r => {
                         if (r.error) {
-                            html += `<div class="p-4 border bg-red-50 rounded-lg"><p class="font-medium">${r.filename}</p><p class="text-sm text-red-600">Error: ${r.error}</p></div>`;
+                            html += `<div class="p-4 mb-4 border bg-red-50 border-red-200 rounded-lg"><p class="font-medium text-red-800">${r.filename}</p><p class="text-sm text-red-600">Error: ${r.error}</p></div>`;
                         } else {
-                            const badgeClass = r.predicted_class_name === 'Malignant' ? 'bg-red-100 text-red-800' :
-                                r.predicted_class_name === 'Benign' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800';
-                            html += `<div class="p-4 border rounded-lg bg-white interactive-card">
-                            <div class="flex justify-between">
-                                <div>
-                                    <p class="font-medium">${r.filename}</p>
-                                    <p class="text-sm mt-1">Diagnosis: <span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">${r.predicted_class_name}</span></p>
+                            const getBadgeClass = (className) => {
+                                switch (className) {
+                                    case 'Malignant':
+                                        return 'bg-red-100 text-red-800 border-red-200';
+                                    case 'Beginning':
+                                        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                                    default:
+                                        return 'bg-gray-100 text-gray-800 border-gray-200';
+                                }
+                            };
+
+                            const getRiskColor = (className) => {
+                                switch (className) {
+                                    case 'Malignant':
+                                        return 'text-red-600';
+                                    case 'Beginning':
+                                        return 'text-yellow-500';
+                                    default:
+                                        return 'text-gray-600';
+                                }
+                            };
+
+                            const getDiagnosisText = (className) => {
+                                if (className === 'Malignant') {
+                                    return 'High risk detected. Immediate consultation with a specialist is strongly recommended.';
+                                }
+                                if (className === 'Beginning') {
+                                    return 'Potential early-stage indicators found. Consultation with a doctor is advised for further evaluation.';
+                                }
+                                return 'No immediate malignant indicators found. Continue with regular check-ups.';
+                            };
+
+
+                            const badgeClass = getBadgeClass(r.predicted_class_name);
+                            const riskColor = getRiskColor(r.predicted_class_name);
+                            const diagnosisText = getDiagnosisText(r.predicted_class_name);
+
+                            html += `
+                                <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="font-medium text-slate-800">${r.filename}</p>
+                                            <div class="mt-2">
+                                                <span class="px-3 py-1 rounded-full text-xs font-semibold border ${badgeClass}">
+                                                    ${r.predicted_class_name}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right flex-shrink-0 ml-4">
+                                            <p class="font-bold text-3xl ${riskColor}">${r.confidence_percentage}%</p>
+                                            <p class="text-xs text-slate-500">Confidence</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 pt-4 border-t border-slate-200">
+                                        <h4 class="font-semibold text-slate-800">Recommendation</h4>
+                                        <p class="text-sm text-slate-600 mt-1">${diagnosisText}</p>
+                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <p class="font-semibold text-2xl text-indigo-600">${r.confidence_percentage}%</p>
-                                    <p class="text-xs">Confidence</p>
-                                </div>
-                            </div>
-                        </div>`;
+                            `;
                         }
                     });
+
+                    html += '</div>';
                     this.results.content.innerHTML = html;
-                },
-
-                applySavedTheme() {
-                    const saved = localStorage.getItem('theme') || 'light';
-                    if (saved === 'dark') {
-                        document.documentElement.classList.add('dark');
-                        this.moonIcon.classList.add('hidden');
-                        this.sunIcon.classList.remove('hidden');
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                        this.moonIcon.classList.remove('hidden');
-                        this.sunIcon.classList.add('hidden');
-                    }
-                },
-
-                toggleTheme() {
-                    if (document.documentElement.classList.contains('dark')) {
-                        document.documentElement.classList.remove('dark');
-                        localStorage.setItem('theme', 'light');
-                        this.moonIcon.classList.remove('hidden');
-                        this.sunIcon.classList.add('hidden');
-                    } else {
-                        document.documentElement.classList.add('dark');
-                        localStorage.setItem('theme', 'dark');
-                        this.moonIcon.classList.add('hidden');
-                        this.sunIcon.classList.remove('hidden');
-                    }
                 }
             };
-
             app.init();
         });
     </script>
