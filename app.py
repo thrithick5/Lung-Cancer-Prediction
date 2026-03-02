@@ -1,76 +1,64 @@
 import os
-import io
-import base64
 import logging
 import datetime
-import numpy as np
+from pathlib import Path
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-from sklearn.metrics import classification_report, confusion_matrix, roc_curve, roc_auc_score
-from sklearn.calibration import calibration_curve
-import matplotlib.pyplot as plt
+from torchvision import transforms
 from dotenv import load_dotenv
-from pathlib import Path
+import psycopg2
 
-# --- Path Setup ---
+# ========================================
+# PATH SETUP
+# ========================================
 APP_DIR = Path(__file__).resolve().parent
-MODEL_PATH = APP_DIR / 'calibrated_grayscale_cnn.pth' 
-UPLOAD_FOLDER_PATH = APP_DIR / 'uploads'
+MODEL_PATH = APP_DIR / "calibrated_grayscale_cnn.pth"
+UPLOAD_FOLDER_PATH = APP_DIR / "uploads"
 
-# --- Enhanced Startup Logging ---
+# ========================================
+# ENVIRONMENT VARIABLES
+# ========================================
 env_path = APP_DIR / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
-    print(f"Loaded environment variables from: {env_path}")
-else:
-    print(f"Warning: .env file not found at {env_path}. Relying on system environment variables.")
 
-# --------------- Logging Setup ---------------
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# ========================================
+# LOGGING
+# ========================================
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Log the status of environment variables immediately after loading
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-logger.info(f"SUPABASE_URL loaded: {bool(SUPABASE_URL)}")
-logger.info(f"SUPABASE_KEY loaded: {bool(SUPABASE_KEY)}")
-
-
-# ------------- Supabase Setup (Optional) ----------------
-supabase = None
-try:
-    from supabase import create_client, Client
-    if SUPABASE_URL and SUPABASE_KEY:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info("Supabase client initialized successfully.")
-    else:
-        logger.warning("Supabase URL or Key is missing. Database logging will be disabled.")
-except ImportError:
-    logger.warning("Supabase client library not installed. Run 'pip install supabase' to enable database logging.")
-except Exception as e:
-    logger.error(f"An unexpected error occurred during Supabase initialization: {e}")
-
-
-# --------------- Flask Setup -----------------
+# ========================================
+# FLASK SETUP
+# ========================================
 app = Flask(__name__)
 CORS(app)
-app.config['UPLOAD_FOLDER'] = str(UPLOAD_FOLDER_PATH) 
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER_PATH)
+app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg"}
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 # ========================================
-# SOLUTION: MODEL ARCHITECTURE FROM TRAINING SCRIPT
-# This is the definitive, correct architecture.
+# DATABASE CONNECTION (NEON)
 # ========================================
+def get_db_connection():
+    if not DATABASE_URL:
+        raise ValueError("DATABASE_URL is not set in .env")
+    return psycopg2.connect(DATABASE_URL)
 
+
+# ========================================
+# MODEL ARCHITECTURE
+# ========================================
 class AttentionModule(nn.Module):
-    """Simple Spatial and Channel Attention Block from the training script."""
+    """Simple Spatial and Channel Attention Block."""
     def __init__(self, in_channels):
         super(AttentionModule, self).__init__()
         # Spatial Attention
@@ -99,8 +87,9 @@ class AttentionModule(nn.Module):
 
         return x_sa
 
+
 class ResidualBlock(nn.Module):
-    """A standard Residual Block from the training script."""
+    """A standard Residual Block."""
     def __init__(self, in_channels, out_channels, stride=1):
         super(ResidualBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -123,11 +112,12 @@ class ResidualBlock(nn.Module):
         out = self.relu(out)
         return out
 
+
 class AdvancedMedicalCNN(nn.Module):
-    """The exact CNN architecture from the training script."""
+    """Advanced CNN architecture optimized for grayscale medical imaging (1 Channel)."""
     def __init__(self, num_classes=2):
         super(AdvancedMedicalCNN, self).__init__()
-        # 1. Initial Convolution
+        # 1. Initial Convolution (Input: 1 Channel)
         self.conv_initial = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(32),
@@ -147,7 +137,7 @@ class AdvancedMedicalCNN(nn.Module):
         self.fc = nn.Linear(256, num_classes)
 
     def _make_layer(self, in_channels, out_channels, blocks, stride=1):
-        """Helper function to stack residual blocks, from training script."""
+        """Helper function to stack residual blocks."""
         layers = []
         layers.append(ResidualBlock(in_channels, out_channels, stride))
         for _ in range(1, blocks):
@@ -166,11 +156,14 @@ class AdvancedMedicalCNN(nn.Module):
         x = self.fc(x)
         return x
 
-# -------------- Model Loading and Preprocessing ------------------
 
+# ========================================
+# MODEL LOADING
+# ========================================
 model = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-class_names = ['Beginning', 'Malignant']
+class_names = ["Beginning", "Malignant"]
+model_temperature = 1.0
 
 preprocess = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -179,145 +172,154 @@ preprocess = transforms.Compose([
     transforms.Normalize([0.5], [0.5]),
 ])
 
+
 def load_model_at_startup():
-    global model
-    logger.info(f"Checking for model file at: {MODEL_PATH}")
-    if not os.path.exists(MODEL_PATH):
-        logger.error(f"Model file not found at '{MODEL_PATH}'. Please ensure the model file is in the same directory as this script.")
+    global model, model_temperature
+
+    if not MODEL_PATH.exists():
+        logger.error("Model file not found.")
         return
 
     try:
-        logger.info(f"Loading model from: {MODEL_PATH}")
         checkpoint = torch.load(MODEL_PATH, map_location=device)
-        
-        num_classes = len(class_names)
-        model = AdvancedMedicalCNN(num_classes=num_classes)
-        
-        state_dict = checkpoint
-        if 'model_state_dict' in checkpoint:
-            state_dict = checkpoint['model_state_dict']
-        
+        model = AdvancedMedicalCNN(num_classes=len(class_names))
+
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
         model.load_state_dict(state_dict)
+
+        if "temperature" in checkpoint:
+            model_temperature = checkpoint["temperature"]
+            logger.info(f"Loaded temperature scaling factor: {model_temperature}")
+
         model.to(device)
         model.eval()
-        
-        logger.info("Model loaded successfully!")
+
+        logger.info("Model loaded successfully.")
 
     except Exception as e:
-        logger.error(f"Failed to load model from {MODEL_PATH}: {e}", exc_info=True)
+        logger.error(f"Model loading failed: {e}", exc_info=True)
         model = None
 
-# -------------- Helper and Prediction Functions ------------------
 
+# ========================================
+# HELPER FUNCTIONS
+# ========================================
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
+
 
 def predict_single_image(image_path):
-    """Predicts a single image, returns a dict with results or an error."""
     try:
-        image = Image.open(image_path).convert('L')
+        image = Image.open(image_path).convert("L")
         tensor = preprocess(image).unsqueeze(0).to(device)
-        
+
         with torch.no_grad():
             outputs = model(tensor)
-            probabilities = F.softmax(outputs, dim=1)[0]
-            confidence, predicted_idx = torch.max(probabilities, 0)
-            
-            result = {
-                "predicted_class_name": class_names[predicted_idx.item()],
-                "confidence_percentage": int(round(confidence.item() * 100))
-            }
-        return result
+            scaled_outputs = outputs / model_temperature
+            probs = F.softmax(scaled_outputs, dim=1)[0]
+            confidence, idx = torch.max(probs, 0)
+
+        return {
+            "predicted_class_name": class_names[idx.item()],
+            "confidence_percentage": int(round(confidence.item() * 100)),
+        }
+
     except Exception as e:
-        logger.error(f"Error during prediction for {image_path}: {e}", exc_info=True)
+        logger.error(f"Prediction failed: {e}", exc_info=True)
         return {"error": "Failed to process image."}
 
-# --------------- API Routes ----------------------
 
-@app.route('/')
+# ========================================
+# ROUTES
+# ========================================
+@app.route("/")
 def home():
-    return render_template('frontpage.html')
+    return render_template("frontpage.html")
 
-@app.route('/detector')
+
+@app.route("/detector")
 def detector():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/model_status', methods=['GET'])
+
+@app.route("/model_status")
 def model_status():
     return jsonify({
-        'loaded': model is not None,
-        'message': 'Model ready' if model else 'Model not loaded',
-        'device': str(device),
-        'class_names': class_names
+        "loaded": model is not None,
+        "device": str(device),
+        "class_names": class_names,
     })
 
-@app.route('/predict', methods=['POST'])
+
+@app.route("/predict", methods=["POST"])
 def predict():
+
     if model is None:
-        return jsonify({'error': 'Model is not loaded, please wait or check server logs.'}), 503
+        return jsonify({"error": "Model not loaded."}), 503
 
-    if 'images' not in request.files:
-        return jsonify({'error': 'No image files provided.'}), 400
+    files = request.files.getlist("images")
+    if not files:
+        return jsonify({"error": "No images uploaded."}), 400
 
-    files = request.files.getlist('images')
-    if not files or all(f.filename == '' for f in files):
-        return jsonify({'error': 'No files selected for upload.'}), 400
-    
     patient_info = {
-        'patientName': request.form.get('patientName', 'Anonymous'),
-        'patientAge': request.form.get('patientAge'),
-        'patientGender': request.form.get('patientGender'),
-        'smokingHistory': request.form.get('smokingHistory'),
+        "patientName": request.form.get("patientName", "Anonymous"),
+        "patientAge": request.form.get("patientAge"),
+        "patientGender": request.form.get("patientGender"),
+        "smokingHistory": request.form.get("smokingHistory"),
     }
-    
-    prediction_results = []
+
+    results = []
+
     for file in files:
         if file and allowed_file(file.filename):
-            filename = file.filename
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            try:
-                file.save(path)
-                result = predict_single_image(path)
-                result['filename'] = filename
-                prediction_results.append(result)
-            except Exception as e:
-                logger.error(f"Error processing file {filename}: {e}", exc_info=True)
-                prediction_results.append({'filename': filename, 'error': 'Server failed to process this image.'})
-            finally:
-                if os.path.exists(path):
-                    os.remove(path)
-        elif file:
-            prediction_results.append({'filename': file.filename, 'error': 'File type not allowed.'})
-            
-    if supabase:
-        first_valid_result = next((r for r in prediction_results if 'error' not in r), None)
-        if first_valid_result:
-            try:
-                record = {
-                    'patient_name': patient_info['patientName'],
-                    'patient_age': patient_info['patientAge'],
-                    'patient_gender': patient_info['patientGender'],
-                    'smoking_history': patient_info['smokingHistory'],
-                    'prediction': first_valid_result.get('predicted_class_name'),
-                    'confidence': first_valid_result.get('confidence_percentage'),
-                    'model_version': 'AdvancedMedicalCNN_v1',
-                    'prediction_timestamp': datetime.datetime.now().isoformat(),
-                    'image_count': len(files)
-                }
-                supabase.table('predictions').insert(record).execute()
-            except Exception as e:
-                logger.error(f"Database save failed: {e}", exc_info=True)
+            path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            file.save(path)
 
-    final_response = {
-        'patient_info': patient_info,
-        'results': prediction_results
-    }
-    
-    return jsonify(final_response)
+            result = predict_single_image(path)
+            result["filename"] = file.filename
+            results.append(result)
 
-# --------------- Run App -----------------------
-if __name__ == '__main__':
-    logger.info("--- Starting Flask Application ---")
+            os.remove(path)
+        else:
+            results.append({"filename": file.filename, "error": "Invalid file type."})
+
+    # ==========================
+    # SAVE TO NEON DATABASE
+    # ==========================
+    first_valid = next((r for r in results if "error" not in r), None)
+
+    if first_valid:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                INSERT INTO public.predictions
+                (patient_name, age, gender, smoking_history, predicted_class, confidence)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                patient_info["patientName"],
+                int(patient_info["patientAge"]) if patient_info["patientAge"] else None,
+                patient_info["patientGender"],
+                patient_info["smokingHistory"],
+                first_valid["predicted_class_name"],
+                float(first_valid["confidence_percentage"]),
+            ))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info("Prediction saved to Neon.")
+
+        except Exception as e:
+            logger.error(f"Database insert failed: {e}", exc_info=True)
+
+    return jsonify({
+        "patient_info": patient_info,
+        "results": results
+    })
+
+if __name__ == "__main__":
     load_model_at_startup()
-    app.run(debug=True, host='0.0.0.0', port=5008)
-
+    app.run(debug=True, host="0.0.0.0", port=5008)
