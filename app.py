@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER_PATH)
 app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg"}
@@ -212,8 +212,10 @@ def model_status():
     })
 
 
-@app.route("/predict", methods=["POST"])
+@app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
+    if request.method == "OPTIONS":
+        return jsonify({"status": "ok"}), 200
 
     if model is None:
         return jsonify({"error": "Model not loaded."}), 503
@@ -249,7 +251,7 @@ def predict():
     # ==========================
     first_valid = next((r for r in results if "error" not in r), None)
 
-    if first_valid:
+    if first_valid and DATABASE_URL:
         try:
             conn = get_db_connection()
             cur = conn.cursor()
