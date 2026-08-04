@@ -137,6 +137,7 @@ class AdvancedMedicalCNN(nn.Module):
 
 model = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_num_threads(1)
 class_names = ["Beginning", "Malignant"]
 model_temperature = 1.0
 
