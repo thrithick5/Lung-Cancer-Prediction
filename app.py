@@ -201,14 +201,6 @@ def predict_single_image(image_path):
         return {"error": "Failed to process image."}
 
 
-@app.route("/")
-def home():
-    return render_template("frontpage.html")
-
-
-@app.route("/detector")
-def detector():
-    return render_template("index.html")
 
 
 @app.route("/model_status")
