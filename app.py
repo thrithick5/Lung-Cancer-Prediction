@@ -13,31 +13,19 @@ from torchvision import transforms
 from dotenv import load_dotenv
 import psycopg2
 
-# ========================================
-# PATH SETUP
-# ========================================
 APP_DIR = Path(__file__).resolve().parent
 MODEL_PATH = APP_DIR / "calibrated_grayscale_cnn.pth"
 UPLOAD_FOLDER_PATH = APP_DIR / "uploads"
 
-# ========================================
-# ENVIRONMENT VARIABLES
-# ========================================
 env_path = APP_DIR / ".env"
 if env_path.exists():
     load_dotenv(dotenv_path=env_path)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# ========================================
-# LOGGING
-# ========================================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ========================================
-# FLASK SETUP
-# ========================================
 app = Flask(__name__)
 CORS(app)
 
@@ -45,18 +33,12 @@ app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER_PATH)
 app.config["ALLOWED_EXTENSIONS"] = {"png", "jpg", "jpeg"}
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-# ========================================
-# DATABASE CONNECTION (NEON)
-# ========================================
 def get_db_connection():
     if not DATABASE_URL:
         raise ValueError("DATABASE_URL is not set in .env")
     return psycopg2.connect(DATABASE_URL)
 
 
-# ========================================
-# MODEL ARCHITECTURE
-# ========================================
 class AttentionModule(nn.Module):
     """Simple Spatial and Channel Attention Block."""
     def __init__(self, in_channels):
@@ -76,12 +58,10 @@ class AttentionModule(nn.Module):
         )
 
     def forward(self, x):
-        # Channel Attention
         ca = self.avg_pool(x).squeeze(-1).squeeze(-1)
         ca = self.channel_attention(ca).unsqueeze(-1).unsqueeze(-1)
         x_ca = x * ca.expand_as(x)
 
-        # Spatial Attention
         sa = self.spatial_attention(x_ca)
         x_sa = x_ca * sa.expand_as(x)
 
@@ -117,7 +97,6 @@ class AdvancedMedicalCNN(nn.Module):
     """Advanced CNN architecture optimized for grayscale medical imaging (1 Channel)."""
     def __init__(self, num_classes=2):
         super(AdvancedMedicalCNN, self).__init__()
-        # 1. Initial Convolution (Input: 1 Channel)
         self.conv_initial = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=7, stride=2, padding=3, bias=False),
             nn.BatchNorm2d(32),
@@ -125,7 +104,6 @@ class AdvancedMedicalCNN(nn.Module):
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
 
-        # 2. Residual and Attention Layers
         self.layer1 = self._make_layer(32, 64, 2)
         self.att1 = AttentionModule(64)
         self.layer2 = self._make_layer(64, 128, 2, stride=2)
@@ -157,9 +135,6 @@ class AdvancedMedicalCNN(nn.Module):
         return x
 
 
-# ========================================
-# MODEL LOADING
-# ========================================
 model = None
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ["Beginning", "Malignant"]
@@ -201,9 +176,6 @@ def load_model_at_startup():
         model = None
 
 
-# ========================================
-# HELPER FUNCTIONS
-# ========================================
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
 
@@ -229,9 +201,6 @@ def predict_single_image(image_path):
         return {"error": "Failed to process image."}
 
 
-# ========================================
-# ROUTES
-# ========================================
 @app.route("/")
 def home():
     return render_template("frontpage.html")
