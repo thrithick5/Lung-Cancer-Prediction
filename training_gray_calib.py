@@ -15,9 +15,6 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from typing import List, Tuple
 
-# =======================================================
-# COLAB/SETUP INSTRUCTIONS (MUST RUN SEPARATELY IN COLAB)
-# =======================================================
 """
 ============================================================
            CRITICAL COLAB DATA SETUP STEPS
