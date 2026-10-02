@@ -1,0 +1,19 @@
+# Web Framework
+Flask>=3.0.2
+flask-cors>=4.0.0
+
+# Deep Learning (PyTorch stack)
+torch>=2.2.0
+torchvision
+
+# Image Processing
+Pillow>=10.2.0
+
+# Environment Variables
+python-dotenv>=1.0.1
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Production Server
+gunicorn>=21.2.0
